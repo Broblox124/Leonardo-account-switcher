@@ -4,6 +4,11 @@ import fs from 'fs';
 const accounts = loadAccounts();
 let currentIndex = 0;
 
+// Universal wait (avoids page.waitForTimeout issues on older Puppeteer)
+async function delay(ms) {
+  return new Promise(res => setTimeout(res, ms));
+}
+
 async function saveScreenshot(page, filename) {
   try {
     await page.screenshot({ path: filename });
@@ -34,8 +39,8 @@ export async function loginLeonardo(browser) {
     await saveScreenshot(page, 'login_step1.png');
 
     console.log('Waiting for "Continue with Email" button...');
-    await page.waitForTimeout(1000); // Give extra time for render
-    await page.waitForSelector('button', { visible: true, timeout: 40000 });
+    await delay(500); // Extra short wait in case of animation
+    await page.waitForSelector('button', { visible: true, timeout: 5000 });
     const buttons = await page.$$('button');
     let foundEmailBtn = false;
 
@@ -54,19 +59,19 @@ export async function loginLeonardo(browser) {
       throw new Error('Could not find "Continue with Email" button');
     }
 
-    await page.waitForTimeout(1000); // Let the next UI render
+    await delay(500);
     await saveScreenshot(page, 'login_step2_emailbox.png');
 
     console.log('Waiting for email input...');
-    await page.waitForSelector('input[type="email"], input[name="email"]', { visible: true, timeout: 40000 });
+    await page.waitForSelector('input[type="email"], input[name="email"]', { visible: true, timeout: 5000 });
     await page.type('input[type="email"], input[name="email"]', account.email, { delay: 40 });
     console.log(`Typed email: ${account.email}`);
 
-    await page.waitForTimeout(500);
+    await delay(200);
     await saveScreenshot(page, 'login_step3_email_entered.png');
 
     console.log('Looking for "Continue" button after email...');
-    await page.waitForSelector('button', { visible: true, timeout: 40000 });
+    await page.waitForSelector('button', { visible: true, timeout: 5000 });
     const continueButtons = await page.$$('button');
     let foundContinueBtn = false;
     for (let btn of continueButtons) {
@@ -84,19 +89,19 @@ export async function loginLeonardo(browser) {
       throw new Error('Could not find "Continue" button after email entry');
     }
 
-    await page.waitForTimeout(1000); // Wait for password render
+    await delay(500);
     await saveScreenshot(page, 'login_step4_passwordbox.png');
 
     console.log('Waiting for password input...');
-    await page.waitForSelector('input[type="password"], input[name="password"]', { visible: true, timeout: 40000 });
+    await page.waitForSelector('input[type="password"], input[name="password"]', { visible: true, timeout: 5000 });
     await page.type('input[type="password"], input[name="password"]', account.password, { delay: 40 });
     console.log('Typed password.');
 
-    await page.waitForTimeout(500);
+    await delay(200);
     await saveScreenshot(page, 'login_step5_password_entered.png');
 
     console.log('Looking for final "Continue/Login" button...');
-    await page.waitForSelector('button', { visible: true, timeout: 40000 });
+    await page.waitForSelector('button', { visible: true, timeout: 5000 });
     const loginButtons = await page.$$('button');
     let foundFinalBtn = false;
     for (let btn of loginButtons) {
@@ -114,8 +119,9 @@ export async function loginLeonardo(browser) {
       throw new Error('Could not find final "Continue/Login" button');
     }
 
-    await page.waitForTimeout(2000);
+    await delay(1000);
     await saveScreenshot(page, 'login_step6_after_login.png');
+
     // Wait for navigation (dashboard or success)
     await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 });
 
@@ -124,7 +130,7 @@ export async function loginLeonardo(browser) {
   } catch (err) {
     if (page) await saveScreenshot(page, 'login_error_final.png');
     console.error('Login error:', err);
-    throw err; // Pass error up for process management/logs
+    throw err;
   }
 }
 
